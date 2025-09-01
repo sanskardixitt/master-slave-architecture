@@ -1,5 +1,6 @@
 const express = require('express');
 const {connectToDatabase, getDb} = require('./databaseConnection');
+const { ReadPreference } = require ("mongodb");
 
 const app = express();
 
@@ -84,23 +85,26 @@ app.post('/eventual',async(req,res)=>{
     }
 });
 
-app.get("/eventual/:key",async(req,res)=>{
-
+app.get('/eventual/:key', async (req, res) => {
     try {
-        const collection = await getDb().collection("eventualData");
-        const data = await collection.findOne({key : req.params.key},{readPreference : secondaryPreferred});
-        
+        const collection = await getDb().collection('eventualData');
+
+       
+        const data = await collection.findOne(
+            { key: req.params.key },
+            { readPreference: ReadPreference.SECONDARY_PREFERRED }
+        );
+
         if (data) {
             console.log(`Eventual read successful for key: ${req.params.key}`);
-            res.status(200).json(doc);
+            return res.status(200).json(data);
         } else {
-            res.status(404).json({ message: 'Document not found' });
+            return res.status(404).json({ message: 'Document not found' });
         }
 
-
     } catch (error) {
-        res.status(500).json({ message: 'Error during eventual read', error: error.message });
+        console.error('Error during eventual read', error);
+        return res.status(500).json({ message: 'Error during eventual read', error: error.message });
     }
-
 });
 
